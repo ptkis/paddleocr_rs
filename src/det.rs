@@ -23,6 +23,11 @@ impl Det {
         Ok(Self { model, rect_border_size: Self::RECT_BORDER_SIZE })
     }
 
+    pub fn from_memory(model_content: &[u8]) -> PaddleOcrResult<Self> {
+        let model = ort::Session::builder()?.commit_from_memory(model_content)?;
+        Ok(Self { model, rect_border_size: Self::RECT_BORDER_SIZE })
+    }
+
     pub fn with_rect_border_size(mut self, rect_border_size: u32) -> Self {
         self.rect_border_size = rect_border_size;
         self

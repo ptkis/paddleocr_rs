@@ -29,6 +29,17 @@ impl Rec {
         Ok(Self { model, keys, min_score: Self::MIN_SCORE_DEFAULT })
     }
 
+    pub fn from_memory(model_content: &[u8], keys_content: String) -> PaddleOcrResult<Self> {
+        let model = ort::Session::builder()?.commit_from_memory(model_content)?;
+        let keys = " ".chars()
+            .chain(keys_content
+            .chars()
+            .filter(|x| *x != '\n'))
+            .chain(" ".chars())
+            .collect();
+        Ok(Self { model, keys, min_score: Self::MIN_SCORE_DEFAULT })
+    }
+
     pub fn with_min_score(mut self, min_score: f32) -> Self {
         self.min_score = min_score;
         self
