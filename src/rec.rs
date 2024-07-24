@@ -29,10 +29,10 @@ impl Rec {
         Ok(Self { model, keys, min_score: Self::MIN_SCORE_DEFAULT })
     }
 
-    pub fn from_memory(model_content: &[u8], keys_content: String) -> PaddleOcrResult<Self> {
+    pub fn from_memory(model_content: &[u8], keys_content: &[u8]) -> PaddleOcrResult<Self> {
         let model = ort::Session::builder()?.commit_from_memory(model_content)?;
         let keys = " ".chars()
-            .chain(keys_content
+            .chain(String::from_utf8_lossy(keys_content)
             .chars()
             .filter(|x| *x != '\n'))
             .chain(" ".chars())
