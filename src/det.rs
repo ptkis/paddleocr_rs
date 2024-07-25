@@ -2,20 +2,20 @@ use std::path::Path;
 use image::{DynamicImage, GenericImageView, Luma, GrayImage};
 use imageproc::{rect::Rect, point::Point};
 use ndarray::{Array, ArrayBase, Dim, OwnedRepr};
-use ort::{inputs, Session};
+use ort::{ExecutionProviderDispatch, inputs, Session};
 
 use crate::{error::PaddleOcrResult, PaddleOcrError};
 
 pub struct Det {
     model: Session,
-    rect_border_size: u32
+    rect_border_size: u32,
 }
 
 impl Det {
     const RECT_BORDER_SIZE: u32 = 8;
 
     pub fn new(model: Session) -> Self {
-        Self { model, rect_border_size: Self::RECT_BORDER_SIZE}
+        Self { model, rect_border_size: Self::RECT_BORDER_SIZE }
     }
 
     pub fn from_file(model_path: impl AsRef<Path>) -> PaddleOcrResult<Self> {
@@ -25,6 +25,11 @@ impl Det {
 
     pub fn from_memory(model_content: &[u8]) -> PaddleOcrResult<Self> {
         let model = ort::Session::builder()?.commit_from_memory(model_content)?;
+        Ok(Self { model, rect_border_size: Self::RECT_BORDER_SIZE })
+    }
+
+    pub fn from_memory_with_providers(model_content: &[u8], execution_providers: impl IntoIterator<Item=ExecutionProviderDispatch>) -> PaddleOcrResult<Self> {
+        let model = ort::Session::builder()?.with_execution_providers(execution_providers)?.commit_from_memory(model_content)?;
         Ok(Self { model, rect_border_size: Self::RECT_BORDER_SIZE })
     }
 
@@ -56,7 +61,7 @@ impl Det {
         for pixel in img.pixels() {
             let x = pixel.0 as _;
             let y = pixel.1 as _;
-            let [r, g, b, _] = pixel.2 .0;
+            let [r, g, b, _] = pixel.2.0;
             input[[0, 0, y, x]] = (((r as f32) / 255.) - 0.485) / 0.229;
             input[[0, 1, y, x]] = (((g as f32) / 255.) - 0.456) / 0.224;
             input[[0, 2, y, x]] = (((b as f32) / 255.) - 0.406) / 0.225;
@@ -64,7 +69,7 @@ impl Det {
         Ok(input)
     }
 
-    fn run_model(&self, input: &ArrayBase<OwnedRepr<f32>, Dim<[usize; 4]>>, width: u32, height: u32) -> PaddleOcrResult<GrayImage>{
+    fn run_model(&self, input: &ArrayBase<OwnedRepr<f32>, Dim<[usize; 4]>>, width: u32, height: u32) -> PaddleOcrResult<GrayImage> {
         let pad_h = Self::get_pad_length(height);
         let outputs = self.model.run(inputs!["x" => input.view()]?)?;
         let output = outputs.iter().next().ok_or(PaddleOcrError::custom("no output"))?.1;
@@ -80,7 +85,7 @@ impl Det {
         Ok(img)
     }
 
-    fn find_box(&self, img: &GrayImage) ->Vec<Rect> {
+    fn find_box(&self, img: &GrayImage) -> Vec<Rect> {
         let (w, h) = img.dimensions();
         imageproc::contours::find_contours_with_threshold::<u32>(img, 200)
             .into_iter()
@@ -97,14 +102,14 @@ impl Det {
 
     fn bounding_rect(points: &[Point<u32>]) -> Option<Rect> {
         let (x_min, x_max, y_min, y_max) = points.into_iter()
-            .fold(None, |ret, p|{
+            .fold(None, |ret, p| {
                 match ret {
                     None => Some((p.x, p.x, p.y, p.y)),
                     Some((x_min, x_max, y_min, y_max)) => {
                         Some((x_min.min(p.x), x_max.max(p.x), y_min.min(p.y), y_max.max(p.y)))
                     }
                 }
-            })?; 
+            })?;
         let width = (x_max - x_min) as u32;
         let height = (y_max - y_min) as u32;
         if width <= 5 || height <= 5 {

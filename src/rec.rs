@@ -1,7 +1,7 @@
 use std::{path::Path, borrow::Cow};
 use image::{DynamicImage, GenericImageView};
 use ndarray::{Array, ArrayBase, Dim, OwnedRepr, Axis, s};
-use ort::{inputs, Session};
+use ort::{ExecutionProviderDispatch, inputs, Session};
 
 use crate::{error::PaddleOcrResult, PaddleOcrError};
 
@@ -31,6 +31,17 @@ impl Rec {
 
     pub fn from_memory(model_content: &[u8], keys_content: &[u8]) -> PaddleOcrResult<Self> {
         let model = ort::Session::builder()?.commit_from_memory(model_content)?;
+        let keys = " ".chars()
+            .chain(String::from_utf8_lossy(keys_content)
+            .chars()
+            .filter(|x| *x != '\n'))
+            .chain(" ".chars())
+            .collect();
+        Ok(Self { model, keys, min_score: Self::MIN_SCORE_DEFAULT })
+    }
+
+    pub fn from_memory_with_providers(model_content: &[u8], keys_content: &[u8], execution_providers: impl IntoIterator<Item = ExecutionProviderDispatch>) -> PaddleOcrResult<Self> {
+        let model = ort::Session::builder()?.with_execution_providers(execution_providers)?.commit_from_memory(model_content)?;
         let keys = " ".chars()
             .chain(String::from_utf8_lossy(keys_content)
             .chars()
