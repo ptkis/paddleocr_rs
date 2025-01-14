@@ -2,6 +2,7 @@ use std::path::Path;
 use image::{DynamicImage, GenericImageView, Luma, GrayImage};
 use imageproc::{rect::Rect, point::Point};
 use ndarray::{Array, ArrayBase, Dim, OwnedRepr};
+use ort::execution_providers::ExecutionProviderDispatch;
 use ort::inputs;
 use ort::session::{builder::SessionBuilder, Session};
 
@@ -20,17 +21,17 @@ impl Det {
     }
 
     pub fn from_file(model_path: impl AsRef<Path>) -> PaddleOcrResult<Self> {
-        let model = ort::Session::builder()?.commit_from_file(model_path)?;
+        let model = SessionBuilder::new()?.commit_from_file(model_path)?;
         Ok(Self { model, rect_border_size: Self::RECT_BORDER_SIZE })
     }
 
     pub fn from_memory(model_content: &[u8]) -> PaddleOcrResult<Self> {
-        let model = ort::Session::builder()?.commit_from_memory(model_content)?;
+        let model = SessionBuilder::new()?.commit_from_memory(model_content)?;
         Ok(Self { model, rect_border_size: Self::RECT_BORDER_SIZE })
     }
 
     pub fn from_memory_with_providers(model_content: &[u8], execution_providers: impl IntoIterator<Item=ExecutionProviderDispatch>) -> PaddleOcrResult<Self> {
-        let model = ort::Session::builder()?.with_execution_providers(execution_providers)?.commit_from_memory(model_content)?;
+        let model = SessionBuilder::new()?.with_execution_providers(execution_providers)?.commit_from_memory(model_content)?;
         Ok(Self { model, rect_border_size: Self::RECT_BORDER_SIZE })
     }
 
