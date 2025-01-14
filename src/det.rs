@@ -2,7 +2,8 @@ use std::path::Path;
 use image::{DynamicImage, GenericImageView, Luma, GrayImage};
 use imageproc::{rect::Rect, point::Point};
 use ndarray::{Array, ArrayBase, Dim, OwnedRepr};
-use ort::{ExecutionProviderDispatch, inputs, Session};
+use ort::inputs;
+use ort::session::{builder::SessionBuilder, Session};
 
 use crate::{error::PaddleOcrResult, PaddleOcrError};
 

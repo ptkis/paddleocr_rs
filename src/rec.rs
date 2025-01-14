@@ -1,8 +1,8 @@
 use std::{path::Path, borrow::Cow};
 use image::{DynamicImage, GenericImageView};
 use ndarray::{Array, ArrayBase, Dim, OwnedRepr, Axis, s};
-use ort::{ExecutionProviderDispatch, inputs, Session};
-
+use ort::inputs;
+use ort::session::{builder::SessionBuilder, Session};
 use crate::{error::PaddleOcrResult, PaddleOcrError};
 
 pub struct Rec {
